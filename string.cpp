@@ -1,91 +1,64 @@
-#include <cstring>
-#include <algorithm>
 #include "string.hpp"
 
 const String::size_type String::npos{ static_cast<size_type>(-1) };
 
-String::String(DefContructor)
+String::String()
     : m_string{ nullptr }
     , m_capacity{ 15 }
     , m_count{ 0 }
-{
-}
-
-String::String()
-    : String(DefContructor{})
 {
     m_string = new value_type[m_capacity + 1];
     m_string[0] = '\0';
 }
 
-String::String(size_type count, value_type ch)
-    : String(DefContructor{})
+String::String(size_type count, value_type chr)
+    : m_string{ nullptr }
+    , m_capacity{ 15 }
+    , m_count{ 0 }
 {
-    if (count == 0)
-    {
-        m_string = new value_type[m_capacity + 1];
-        m_string[0] = '\0';
-    }
-    else
-    if (count > 0)
-    {
-        if (count > m_capacity)
-            m_capacity = count;
+    if (count > m_capacity)
+        m_capacity = count;
 
-        m_string = new value_type[m_capacity + 1];
-        std::memset(m_string, ch, count);
-        m_string[count] = '\0';
-        m_count = count;
-    }
+    m_string = new value_type[m_capacity + 1];
+    m_chrset(m_string, chr, count);
+    m_string[count] = '\0';
+    m_count = count;
 }
 
-String::String(const_iterator first, const_iterator end)
-    : String(first, static_cast<size_type>(end - first))
+template <typename InputIterator>
+String::String(InputIterator first, InputIterator last)
+    : String(first, static_cast<size_type>(last - first))
 {
 }
 
-String::String(const_pointer s, size_type count)
-    : String(DefContructor{})
+String::String(const_pointer string, size_type count)
+    : m_string{ nullptr }
+    , m_capacity{ 15 }
+    , m_count{ 0 }
 {
-    if (count == 0)
-    {
-        m_string = new value_type[m_capacity + 1];
-        m_string[0] = '\0';
-    }
-    else
-    if (count > 0)
-    {
-        if (count > m_capacity)
-            m_capacity = count;
+    if (count > m_capacity)
+        m_capacity = count;
 
-        m_string = new value_type[m_capacity + 1];
-        std::memcpy(m_string, s, count);
-        m_string[count] = '\0';
-        m_count = count;
-    }
+    m_string = new value_type[m_capacity + 1];
+    m_strcpy(m_string, string, count);
+    m_string[count] = '\0';
+    m_count = count;
+}
+
+String::String(const_pointer string)
+    : String(string, m_strlen(string))
+{
 }
 
 String::String(const String& other)
-    : String(DefContructor{})
+    : String(other.m_string, other.m_count)
 {
-    if (other.m_count == 0)
-    {
-        m_string = new value_type[m_capacity + 1];
-        m_string[0] = '\0';
-    }
-    else
-    if (other.m_count > 0)
-    {
-        m_string = new value_type[other.m_capacity + 1];
-        std::memcpy(m_string, other.m_string, other.m_count);
-        m_string[other.m_count] = '\0';
-        m_capacity = other.m_capacity;
-        m_count = other.m_count;
-    }
 }
 
 String::String(String&& other)
-    : String(DefContructor{})
+    : m_string{ nullptr }
+    , m_capacity{ 15 }
+    , m_count{ 0 }
 {
     m_string = other.m_string;
     m_capacity = other.m_capacity;
@@ -97,67 +70,239 @@ String::String(String&& other)
     other.m_count = 0;
 }
 
-String::String(const String& other, size_type pos)
-    : String(other, pos, (other.m_count - pos))
+String::String(const String& other, size_type index)
+    : String(other, index, (other.m_count - index))
 {
 }
 
-String::String(String&& other, size_type pos)
-    : String(other, pos, (other.m_count - pos))
+String::String(String&& other, size_type index)
+    : String(std::move(other), index, (other.m_count - index))
 {
 }
 
-String::String(const String& other, size_type pos, size_type count)
-    : String(DefContructor{})
+String::String(const String& other, size_type index, size_type count)
+    : m_string{ nullptr }
+    , m_capacity{ 15 }
+    , m_count{ 0 }
 {
-    if (pos >= other.m_count)
+    if (index >= other.m_count)
     {
         m_string = new value_type[m_capacity + 1];
         m_string[0] = '\0';
     }
     else
-    if (pos < other.m_count)
+    if (index < other.m_count)
     {
-        if (count == 0)
-        {
-            m_string = new value_type[m_capacity + 1];
-            m_string[0] = '\0';
-        }
-        else
-        if (count > 0)
-        {
-            count = std::min(count, (other.m_count - pos));
-            if (count > m_capacity)
-                m_capacity = count;
+        count = m_min(count, (other.m_count - index));
+        if (count > m_capacity)
+            m_capacity = count;
 
-            m_string = new value_type[m_capacity + 1];
-            std::memcpy(m_string, (other.m_string + pos), count);
-            m_string[count] = '\0';
-            m_count = count;
-        }
+        m_string = new value_type[m_capacity + 1];
+        m_strcpy(m_string, (other.m_string + index), count);
+        m_string[count] = '\0';
+        m_count = count;
     }
 }
 
-String::String(String&& other, size_type pos, size_type count)
-    : String(other, pos, count)
+String::String(String&& other, size_type index, size_type count)
+    : m_string{ nullptr }
+    , m_capacity{ 15 }
+    , m_count{ 0 }
 {
+    if (index >= other.m_count)
+    {
+        m_string = new value_type[m_capacity + 1];
+        m_string[0] = '\0';
+    }
+    else
+    if (index < other.m_count)
+    {
+        m_string = other.m_string;
+        m_capacity = other.m_capacity;
+        m_count = other.m_count;
+        count = m_min(count, (m_count - index));
+        m_strcpy(m_string, (m_string + index), count);
+        m_string[count] = '\0';
+        m_count = count;
+
+        other.m_capacity = 15;
+        other.m_string = new value_type[other.m_capacity + 1];
+        other.m_string[0] = '\0';
+        other.m_count = 0;
+    }
 }
 
-String::String(std::initializer_list<value_type> ilist)
-    : String(ilist.begin(), ilist.size())
+String::String(std::initializer_list<value_type> list)
+    : m_string{ nullptr }
+    , m_capacity{ 15 }
+    , m_count{ 0 }
 {
+    size_type count{ list.size() };
+
+    if (count > m_capacity)
+        m_capacity = count;
+
+    m_string = new value_type[m_capacity + 1];
+    m_strcpy(m_string, list.begin(), count);
+    m_string[count] = '\0';
+    m_count = count;
 }
 
 String::~String() {
     delete[] m_string;
 }
 
-std::ostream& operator<<(std::ostream& ostream, const String& str)
+String& String::operator=(const String& other)
 {
-    String::size_type index;
+    if (this == &other)
+        return *this;
+    else
+    if (this != &other)
+    {
+        if (other.m_count <= m_capacity)
+        {
+            m_strcpy(m_string, other.m_string, other.m_count);
+            m_string[other.m_count] = '\0';
+            m_count = other.m_count;
+        }
+        else
+        if (other.m_count > m_capacity)
+        {
+            if (other.m_count <= m_capacity * 2)
+                m_capacity *= 2;
+            else
+            if (other.m_count > m_capacity * 2)
+                m_capacity = other.m_count;
 
-    for (index = 0; index < str.m_count; ++index)
-        ostream << str.m_string[index];
+            delete[] m_string;
+            m_string = new value_type[m_capacity + 1];
+            m_strcpy(m_string, other.m_string, other.m_count);
+            m_string[other.m_count] = '\0';
+            m_count = other.m_count;
+        }
+    }
+
+    return *this;
+}
+
+String& String::operator=(String&& other)
+{
+    if (this == &other)
+        return *this;
+    else
+    if (this != &other)
+    {
+        delete[] m_string;
+        m_string = other.m_string;
+        m_capacity = other.m_capacity;
+        m_count = other.m_count;
+
+        other.m_capacity = 15;
+        other.m_string = new value_type[other.m_capacity + 1];
+        other.m_string[0] = '\0';
+        other.m_count = 0;
+    }
+
+    return *this;
+}
+
+String& String::operator=(const_pointer string)
+{
+    size_type count{ m_strlen(string) };
+
+    if (count <= m_capacity)
+    {
+        m_strcpy(m_string, string, count);
+        m_string[count] = '\0';
+        m_count = count;
+    }
+    else
+    if (count > m_capacity)
+    {
+        if (count <= m_capacity * 2)
+            m_capacity *= 2;
+        else
+        if (count > m_capacity * 2)
+            m_capacity = count;
+
+        delete[] m_string;
+        m_string = new value_type[m_capacity + 1];
+        m_strcpy(m_string, string, count);
+        m_string[count] = '\0';
+        m_count = count;
+    }
+
+    return *this;
+}
+
+String& String::operator=(value_type chr)
+{
+    m_string[0] = chr;
+    m_string[1] = '\0';
+    m_count = 1;
+
+    return *this;
+}
+
+String& String::operator=(std::initializer_list<value_type> list)
+{
+    size_type count{ list.size() };
+
+    if (count <= m_capacity)
+    {
+        m_strcpy(m_string, list.begin(), count);
+        m_string[count] = '\0';
+        m_count = count;
+    }
+    else
+    if (count > m_capacity)
+    {
+        if (count <= m_capacity * 2)
+            m_capacity *= 2;
+        else
+        if (count > m_capacity * 2)
+            m_capacity = count;
+
+        delete[] m_string;
+        m_string = new value_type[m_capacity + 1];
+        m_strcpy(m_string, list.begin(), count);
+        m_string[count] = '\0';
+        m_count = count;
+    }
+
+    return *this;
+}
+
+void String::m_chrset(pointer dest, value_type chr, size_type count)
+{
+    for (size_type i{ 0 }; i < count; ++i)
+        dest[i] = chr;
+}
+
+void String::m_strcpy(pointer dest, const_pointer src, size_type count)
+{
+    for (size_type i{ 0 }; i < count; ++i)
+        dest[i] = src[i];
+}
+
+String::size_type String::m_strlen(const_pointer string)
+{
+    size_type count{ 0 };
+
+    for (; *string != '\0'; ++string)
+        ++count;
+
+    return count;
+}
+
+String::size_type String::m_min(size_type value1, size_type value2) {
+    return (value1 < value2) ? value1 : value2;
+}
+
+std::ostream& operator<<(std::ostream& ostream, const String& string)
+{
+    for (String::size_type i{ 0 }; i < string.m_count; ++i)
+        ostream << string.m_string[i];
 
     return ostream;
 }

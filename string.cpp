@@ -25,12 +25,6 @@ String::String(size_type count, value_type chr)
     m_count = count;
 }
 
-template <typename InputIterator>
-String::String(InputIterator first, InputIterator last)
-    : String(first, static_cast<size_type>(last - first))
-{
-}
-
 String::String(const_pointer string, size_type count)
     : m_string{ nullptr }
     , m_capacity{ 15 }
@@ -133,19 +127,8 @@ String::String(String&& other, size_type index, size_type count)
 }
 
 String::String(std::initializer_list<value_type> list)
-    : m_string{ nullptr }
-    , m_capacity{ 15 }
-    , m_count{ 0 }
+    : String(list.begin(), list.size())
 {
-    size_type count{ list.size() };
-
-    if (count > m_capacity)
-        m_capacity = count;
-
-    m_string = new value_type[m_capacity + 1];
-    m_strcpy(m_string, list.begin(), count);
-    m_string[count] = '\0';
-    m_count = count;
 }
 
 String::~String() {
@@ -154,62 +137,84 @@ String::~String() {
 
 String& String::operator=(const String& other)
 {
-    if (this == &other)
-        return *this;
-    else
-    if (this != &other)
-    {
-        if (other.m_count <= m_capacity)
-        {
-            m_strcpy(m_string, other.m_string, other.m_count);
-            m_string[other.m_count] = '\0';
-            m_count = other.m_count;
-        }
-        else
-        if (other.m_count > m_capacity)
-        {
-            if (other.m_count <= m_capacity * 2)
-                m_capacity *= 2;
-            else
-            if (other.m_count > m_capacity * 2)
-                m_capacity = other.m_count;
-
-            delete[] m_string;
-            m_string = new value_type[m_capacity + 1];
-            m_strcpy(m_string, other.m_string, other.m_count);
-            m_string[other.m_count] = '\0';
-            m_count = other.m_count;
-        }
-    }
-
-    return *this;
+    return assign(other);
 }
 
 String& String::operator=(String&& other)
 {
+    return assign(std::move(other));
+}
+
+String& String::operator=(const_pointer string)
+{
+    return assign(string, m_strlen(string));
+}
+
+String& String::operator=(value_type chr)
+{
+    return assign(1, chr);
+}
+
+String& String::operator=(std::initializer_list<value_type> list)
+{
+    return assign(list.begin(), list.size());
+}
+
+String& String::assign(const String& other)
+{
     if (this == &other)
         return *this;
-    else
-    if (this != &other)
-    {
-        delete[] m_string;
-        m_string = other.m_string;
-        m_capacity = other.m_capacity;
-        m_count = other.m_count;
 
-        other.m_capacity = 15;
-        other.m_string = new value_type[other.m_capacity + 1];
-        other.m_string[0] = '\0';
-        other.m_count = 0;
+    return assign(other.m_string, other.m_count);
+}
+
+String& String::assign(String&& other)
+{
+    if (this == &other)
+        return *this;
+
+    delete[] m_string;
+    m_string = other.m_string;
+    m_capacity = other.m_capacity;
+    m_count = other.m_count;
+
+    other.m_capacity = 15;
+    other.m_string = new value_type[other.m_capacity + 1];
+    other.m_string[0] = '\0';
+    other.m_count = 0;
+
+    return *this;
+}
+
+String& String::assign(size_type count, value_type chr)
+{
+    if (count <= m_capacity)
+    {
+        m_chrset(m_string, chr, count);
+        m_string[count] = '\0';
+        m_count = count;
+    }
+    else
+    if (count > m_capacity)
+    {
+        if (count <= m_capacity * 2)
+            m_capacity *= 2;
+        else
+        if (count > m_capacity * 2)
+            m_capacity = count;
+
+        delete[] m_string;
+        m_string = new value_type[m_capacity + 1];
+        m_chrset(m_string, chr, count);
+        m_string[count] = '\0';
+        m_count = count;
     }
 
     return *this;
 }
 
-String& String::operator=(const_pointer string)
+String& String::assign(const_pointer string, size_type count)
 {
-    size_type count{ m_strlen(string) };
-
     if (count <= m_capacity)
     {
         m_strcpy(m_string, string, count);
@@ -235,16 +240,50 @@ String& String::operator=(const_pointer string)
     return *this;
 }
 
-String& String::operator=(value_type chr)
+String& String::assign(const_pointer string)
 {
-    m_string[0] = chr;
-    m_string[1] = '\0';
-    m_count = 1;
+    return assign(string, m_strlen(string));
+}
+
+String& String::assign(const String& other, size_type index, size_type count)
+{
+    if (index >= other.m_count)
+    {
+        m_string[0] = '\0';
+        m_count = 0;
+    }
+    else
+    if (index < other.m_count)
+    {
+        count = m_min(count, (other.m_count - index));
+
+        if (count <= m_capacity)
+        {
+            m_strcpy(m_string, (other.m_string + index), count);
+            m_string[count] = '\0';
+            m_count = count;
+        }
+        else
+        if (count > m_capacity)
+        {
+            if (count <= m_capacity * 2)
+                m_capacity *= 2;
+            else
+            if (count > m_capacity * 2)
+                m_capacity = count;
+
+            delete[] m_string;
+            m_string = new value_type[m_capacity + 1];
+            m_strcpy(m_string, (other.m_string + index), count);
+            m_string[count] = '\0';
+            m_count = count;
+        }
+    }
 
     return *this;
 }
 
-String& String::operator=(std::initializer_list<value_type> list)
+String& String::assign(std::initializer_list<value_type> list)
 {
     size_type count{ list.size() };
 

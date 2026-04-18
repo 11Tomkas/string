@@ -19,9 +19,9 @@ class String
         using const_iterator = const_pointer;
         using reverse_iterator = std::reverse_iterator<pointer>;
         using const_reverse_iterator = std::reverse_iterator<const_pointer>;
-    public:
+
         static const size_type npos;
-    public:
+
         String();
         String(size_type count, value_type chr);
         template <typename InputIterator>
@@ -37,14 +37,14 @@ class String
         String(String&& other, size_type index, size_type count);
         String(std::initializer_list<value_type> list);
         ~String();
-    public:
+
         String& operator=(const String& other);
         String& operator=(String&& other);
         String& operator=(const_pointer string);
         String& operator=(value_type chr);
         String& operator=(std::initializer_list<value_type> list);
         String& operator=(std::nullptr_t) = delete;
-    public:
+
         String& assign(const String& other);
         String& assign(String&& other);
         String& assign(size_type count, value_type chr);
@@ -58,7 +58,7 @@ class String
         pointer m_string;
         size_type m_capacity;
         size_type m_count;
-    private:
+
         void m_chrset(pointer dest, value_type chr, size_type count);
         void m_strcpy(pointer dest, const_pointer src, size_type count);
         size_type m_strlen(const_pointer string);
@@ -66,5 +66,61 @@ class String
 
     friend std::ostream& operator<<(std::ostream& ostream, const String& string);
 };
+
+template <typename InputIterator>
+String::String(InputIterator first, InputIterator last)
+    : m_string{ nullptr }
+    , m_capacity{ 15 }
+    , m_count{ 0 }
+{
+    size_type count{ 0 };
+
+    for (InputIterator it{ first }; it != last; ++it)
+        ++count;
+
+    if (count > m_capacity)
+        m_capacity = count;
+
+    m_string = new char[m_capacity + 1];
+    for (size_type i{ 0 }; i < count; ++i)
+        m_string[i] = *(first++);
+    m_string[count] = '\0';
+    m_count = count;
+}
+
+template <typename InputIterator>
+String& String::assign(InputIterator first, InputIterator last)
+{
+    size_type count{ 0 };
+
+    for (InputIterator it{ first }; it != last; ++it)
+        ++count;
+
+    if (count <= m_capacity)
+    {
+        for (size_type i{ 0 }; i < count; ++i)
+            m_string[i] = *(first++);
+        m_string[count] = '\0';
+        m_count = count;
+    }
+    else
+    if (count > m_capacity)
+    {
+        if (count <= m_capacity * 2)
+            m_capacity *= 2;
+        else
+        if (count > m_capacity * 2)
+            m_capacity = count;
+
+        delete[] m_string;
+        m_string = new char[m_capacity + 1];
+        for (size_type i{ 0 }; i < count; ++i)
+            m_string[i] = *(first++);
+        m_string[count] = '\0';
+        m_count = count;
+    }
+
+    return *this;
+}
 
 #endif

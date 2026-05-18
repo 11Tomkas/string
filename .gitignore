@@ -1,4 +1,4 @@
-.vscode
-compile.cmd
-run.cmd
-main.exe
+.vscode/
+*.cmd
+makefile
+bin/
